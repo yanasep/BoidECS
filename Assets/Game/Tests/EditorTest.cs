@@ -17,7 +17,7 @@ namespace Mine
         public void Setup()
         {
             Singleton.Init();
-            maxDist = Singleton.Instance.Params.neighborDistance;
+            maxDist = Singleton.Instance.Params.wallReflectionDistance;
             maxForce = Singleton.Instance.Params.wallReflectionForce;
         }
 

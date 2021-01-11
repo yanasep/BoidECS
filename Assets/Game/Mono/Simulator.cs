@@ -1,6 +1,6 @@
 ﻿using System.Collections.Generic;
 using UnityEngine;
-using System.Collections;
+using System.Linq;
 
 namespace Mine.Mono
 {
@@ -11,7 +11,7 @@ namespace Mine.Mono
     {
         [SerializeField] int boidCount;
         [SerializeField] float areaExtent;
-        [SerializeField] Boid boidPrefab;
+        [SerializeField] GameObject boidPrefab;
 
         List<Boid> boids = new List<Boid>();
 
@@ -31,12 +31,29 @@ namespace Mine.Mono
             Singleton.Init();
             float halfExtent = areaExtent / 2f;
 
-            for (int i = 0; i < boidCount; i++)
+            // 子がいたら生成しない
+            var objs = GameObject.FindGameObjectsWithTag("Respawn");
+            if (objs.Length > 0)
             {
-                var boid = Instantiate(boidPrefab, Random.insideUnitSphere * halfExtent, Random.rotation, transform);
-                boid.Init();
-                boids.Add(boid);
+                foreach (var item in objs)
+                {
+                    boids.Add(item.AddComponent<Boid>());
+                }
             }
+            else
+            {
+                for (int i = 0; i < boidCount; i++)
+                {
+                    var boidObj = Instantiate(boidPrefab, Random.insideUnitSphere * halfExtent, Random.rotation, transform);
+                    Boid boid = boidObj.AddComponent<Boid>();
+                    boids.Add(boid);
+                }
+            }
+            foreach (var b in boids)
+            {
+                b.Init();
+            }
+
             AreaBound bound = new AreaBound()
             {
                 minX = transform.position.x - halfExtent,

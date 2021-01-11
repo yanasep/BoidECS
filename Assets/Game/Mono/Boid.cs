@@ -25,18 +25,23 @@ namespace Mine.Mono
 
             acceleration = Vector3.zero;
             CheckWalls();
-            ApplySeparation();
-            ApplyAlignment();
-            ApplyCohesion();
+            if (Singleton.Instance.Params.separation)
+                ApplySeparation();
+            if (Singleton.Instance.Params.alignment)
+                ApplyAlignment();
+            if (Singleton.Instance.Params.cohesion)
+                ApplyCohesion();
 
             Move();
         }
 
-        // 近くの魚を探す
+        // 近くの魚を探す: 距離と向きが近いもの
         void FindNeighbors()
         {
             neighbors = Singleton.Instance.Modules.GetBoids()
-                .Where(other => (other.transform.position - transform.position).sqrMagnitude < Singleton.Instance.Params.neighborDistance)
+                .Where(other => other != this)
+                .Where(other => (other.transform.position - transform.position).sqrMagnitude < Singleton.Instance.Params.neighborSqrDistance)
+                .Where(other => Vector3.Dot(other.transform.forward, transform.forward) > Singleton.Instance.Params.neighborRotationDot)
                 .ToArray();
         }
 
@@ -55,26 +60,35 @@ namespace Mine.Mono
 
         public static float CalculateReflectionForce(float dist)
         {
-            float t = Mathf.InverseLerp(0, Singleton.Instance.Params.neighborDistance, dist);
+            float t = Mathf.InverseLerp(0, Singleton.Instance.Params.wallReflectionDistance, dist);
             return Mathf.Lerp(Singleton.Instance.Params.wallReflectionForce, 0, t);
         }
 
         // 近すぎると離れる
         void ApplySeparation()
         {
-
+            if (neighbors.Count() == 0) return;
+            var list = neighbors.Select(other => (transform.position - other.transform.position).normalized);
+            Vector3 dir = new Vector3(list.Average(v => v.x), list.Average(v => v.y), list.Average(v => v.z));
+            acceleration += dir * Singleton.Instance.Params.separationForce;
         }
 
         // 周りと同じ向き、速度で進む
         void ApplyAlignment()
         {
-
+            if (neighbors.Count() == 0) return;
+            var list = neighbors.Select(other => other.Velocity);
+            Vector3 dir = new Vector3(list.Average(v => v.x), list.Average(v => v.y), list.Average(v => v.z));
+            acceleration += dir * Singleton.Instance.Params.alignmentForce;
         }
 
         // 集団の重心へ向かう
         void ApplyCohesion()
         {
-
+            if (neighbors.Count() == 0) return;
+            var list = neighbors.Select(other => other.transform.position);
+            Vector3 avgPos = new Vector3(list.Average(v => v.x), list.Average(v => v.y), list.Average(v => v.z));
+            acceleration += (avgPos - transform.position) * Singleton.Instance.Params.cohesionForce;
         }
 
         void Move()
@@ -85,6 +99,17 @@ namespace Mine.Mono
             Velocity = normalized * Mathf.Clamp(magnitude, Singleton.Instance.Params.minSpeed, Singleton.Instance.Params.maxSpeed);
             transform.position += Velocity * Time.deltaTime;
             transform.rotation = Quaternion.LookRotation(Velocity);
+        }
+
+        private void OnDrawGizmosSelected()
+        {
+            if (neighbors == null) return;
+
+            Gizmos.color = Color.green;
+            foreach (var b in neighbors)
+            {
+                Gizmos.DrawWireCube(b.transform.position, b.transform.localScale);
+            }
         }
     }
 }
