@@ -11,7 +11,7 @@ namespace Mine.ECS
         public Params Params { get; private set; }
         public Module Module { get; private set; }
 
-        const string paramPath = "Param_ECS";
+        const string paramPath = "Param";
 
         public static void Init()
         {
